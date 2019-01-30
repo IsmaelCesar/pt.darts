@@ -11,6 +11,8 @@ from architect import Architect
 from visualize import plot
 
 
+from darts_wine.winedataset import WinesDataset
+
 config = SearchConfig()
 
 device = torch.device("cuda")
@@ -23,7 +25,7 @@ logger = utils.get_logger(os.path.join(config.path, "{}.log".format(config.name)
 config.print_params(logger.info)
 
 
-def main():
+def run_experiment_darts(train_data, train_label, test_data, test_label, repetitions,n_classes, model, final_measurement):
     logger.info("Logger is set - training start")
 
     # set gpu device id
@@ -37,12 +39,21 @@ def main():
     torch.backends.cudnn.benchmark = True
 
     # get data with meta info
-    input_size, input_channels, n_classes, train_data = utils.get_data(
-        config.dataset, config.data_path, cutout_length=0, validation=False)
+    #input_size, input_channels, n_classes, train_data = utils.get_data(
+    #    config.dataset, config.data_path, cutout_length=0, validation=False)
+    #Configurations of wine dataset
+    train_data =  WinesDataset(train_data,train_label)
+    test_data  =  WinesDataset(test_data,test_label)
+
+    input_channels = 1
+
 
     net_crit = nn.CrossEntropyLoss().to(device)
-    model = SearchCNN(input_channels, config.init_channels, n_classes, config.layers, net_crit)
-    model = model.to(device)
+
+    if(model == None):
+        model = SearchCNN(input_channels, config.init_channels, n_classes, config.layers, net_crit)
+        model = model.to(device)
+        logger.info("A new model has been created for window "+ str(final_measurement))
 
     # weights optimizer
     w_optim = torch.optim.SGD(model.weights(), config.w_lr, momentum=config.w_momentum,
@@ -58,6 +69,12 @@ def main():
     indices = list(range(n_train))
     train_sampler = torch.utils.data.sampler.SubsetRandomSampler(indices[:split])
     valid_sampler = torch.utils.data.sampler.SubsetRandomSampler(indices[split:])
+
+
+    n_test = len(test_data)
+    test_indices = list(range(n_test))
+    test_sampler   = torch.utils.data.sampler.SubsetRandomSampler(test_indices)
+
     train_loader = torch.utils.data.DataLoader(train_data,
                                                batch_size=config.batch_size,
                                                sampler=train_sampler,
@@ -68,13 +85,20 @@ def main():
                                                sampler=valid_sampler,
                                                num_workers=config.workers,
                                                pin_memory=True)
+
+    test_loader = torch.utils.data.DataLoader(test_data,
+                                               batch_size=config.batch_size,
+                                               sampler=test_sampler,
+                                               num_workers=config.workers,
+                                               pin_memory=True)
+
     lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
         w_optim, config.epochs, eta_min=config.w_lr_min)
     architect = Architect(model, config.w_momentum, config.w_weight_decay)
 
     # training loop
     best_top1 = 0.
-    for epoch in range(config.epochs):
+    for epoch in range(repetitions):
         lr_scheduler.step()
         lr = lr_scheduler.get_lr()[0]
 
@@ -85,7 +109,7 @@ def main():
 
         # validation
         cur_step = (epoch+1) * len(train_loader)
-        top1 = validate(valid_loader, model, epoch, cur_step)
+        top1 = validate(test_loader, model, epoch, cur_step)
 
         # log
         # genotype
@@ -198,4 +222,4 @@ def validate(valid_loader, model, epoch, cur_step):
 
 
 if __name__ == "__main__":
-    main()
+    run_experiment_darts()
