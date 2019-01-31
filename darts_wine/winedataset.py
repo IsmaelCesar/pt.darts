@@ -26,7 +26,7 @@ class WinesDataset(Dataset):
         """
         self.data = []
         self.labels = []
-        if(use_nparrays == False):
+        if use_nparrays == False:
 
             for d,l in zip(data,labels):
                 self.data.append(d.reshape(1,d.shape[0],d.shape[1]).tolist())
@@ -36,8 +36,8 @@ class WinesDataset(Dataset):
             self.labels = torch.cuda.IntTensor(self.labels)
 
         else:
-            self.data = data.reshape(data.shape[0],1,data.shape[1],data.shape[2])
-            self.labels = labels
+            self.data = torch.from_numpy(data.reshape(data.shape[0],1,data.shape[1],data.shape[2]))
+            self.labels = torch.from_numpy(labels)
 
     def __getitem__(self, item):
         """

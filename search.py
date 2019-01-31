@@ -36,7 +36,7 @@ def run_experiment_darts(train_data, train_label, test_data, test_label, repetit
     torch.manual_seed(config.seed)
     torch.cuda.manual_seed_all(config.seed)
 
-    torch.backends.cudnn.benchmark = True
+    #torch.backends.cudnn.benchmark = True
 
     # get data with meta info
     #input_size, input_channels, n_classes, train_data = utils.get_data(
@@ -48,11 +48,12 @@ def run_experiment_darts(train_data, train_label, test_data, test_label, repetit
     input_channels = 1
 
 
-    net_crit = nn.CrossEntropyLoss().to(device)
+    net_crit = nn.CrossEntropyLoss().to(device) #Setting device to use CUDA
 
     if(model == None):
         model = SearchCNN(input_channels, config.init_channels, n_classes, config.layers, net_crit)
-        model = model.to(device)
+        model.double()
+        model = model.to(device) #Seting device to use CUDA
         logger.info("A new model has been created for window "+ str(final_measurement))
 
     # weights optimizer
@@ -147,8 +148,8 @@ def train(train_loader, valid_loader, model, architect, w_optim, alpha_optim, lr
     model.train()
 
     for step, ((trn_X, trn_y), (val_X, val_y)) in enumerate(zip(train_loader, valid_loader)):
-        trn_X, trn_y = trn_X.to(device, non_blocking=True), trn_y.to(device, non_blocking=True)
-        val_X, val_y = val_X.to(device, non_blocking=True), val_y.to(device, non_blocking=True)
+        trn_X, trn_y = trn_X.to(device, non_blocking=True), trn_y.to(device, non_blocking=True)#.to(device, non_blocking=True) #Cuda for both x and y
+        val_X, val_y = val_X.to(device, non_blocking=True), val_y.to(device, non_blocking=True)#.to(device, non_blocking=True) #Cuda for both x and y
         N = trn_X.size(0)
 
         # phase 2. architect step (alpha)
@@ -194,7 +195,7 @@ def validate(valid_loader, model, epoch, cur_step):
 
     with torch.no_grad():
         for step, (X, y) in enumerate(valid_loader):
-            X, y = X.to(device, non_blocking=True), y.to(device, non_blocking=True)
+            X, y = X.to(device, non_blocking=True), y.to(device, non_blocking=True) #.to(device, non_blocking=True) #Cuda for both x and y
             N = X.size(0)
 
             logits = model(X)

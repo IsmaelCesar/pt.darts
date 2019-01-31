@@ -35,7 +35,12 @@ import csv
 from math import sqrt
 import pandas as pd
 import matplotlib.pyplot as plt
-from darts_for_wine.experiment_darts_wine import run_experiment_darts_wine
+
+from search import config
+from search import run_experiment_darts as run_experiment
+
+
+
 
 #import autokeras as ak
 
@@ -227,7 +232,7 @@ def train_process(idx):
             num_classes=cat_train_label.shape[1]
 
             ##Put here the Convolutive CNN
-            results_list,model = run_experiment_darts_wine(train_data,train_label,test_data,test_label,repetitions,
+            results_list,model = run_experiment(train_data,train_label,test_data,test_label,repetitions,
                                                            num_classes,model,final_measurement)
             test_results[str(final_measurement)].append(np.array(results_list)[1:, 0].astype(float))
             train_results[str(final_measurement)].append(np.array(results_list)[1:, 2].astype(float))
@@ -296,5 +301,7 @@ ngr=ttvar[0]
 ncl=ttvar[ngr+1]
 calload([4,6,5,13],pic_,'TR',0) #QWinesEa-Csystem [4,6,5,13]
 sizeT=len(dataset)
+config.build_parser().name = "DARTS FOR WINE CLASSIFICATION"
+config.build_parser().dataset = "LoadQWinesEaCsystem"
 train_process('LOO')
 
